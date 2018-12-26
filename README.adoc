@@ -240,7 +240,7 @@ Byte 3
 To read the three state bytes of the switches, use `bulkRead(1, 3)`.
 
 The first argument is the endpoint, which really is 0x81. python-libusb1 however
-automatically sets the ENDPOINT_IN bit when using `builkRead()`:
+automatically sets the ENDPOINT_IN bit when using `bulkRead()`:
 
 ----
 ENDPOINT_IN (0x80) | endpoint (0x01)
