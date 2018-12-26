@@ -1,7 +1,11 @@
-= pylogi-flightpanels
+= py-fpanels
 Python library for interacting with Logitech flight panels
 
-NOTE: This is work in progress.
+NOTE: This Python library might never get implemented, as I decided to implement it in Go
+instead, see https://github.com/bjanders/fpanels[fpanels]. I will leave this here for
+reference. See the end of this document for how to interface with
+https://github.com/vpelletier/python-libusb1[python-libusb1] in case you want to make
+your own implementation.
 
 This python library provides codes for interfacing with the following Logitech devices:
 
@@ -9,7 +13,9 @@ This python library provides codes for interfacing with the following Logitech d
 - Flight multi panel
 - Flight radio panel
 
-== Flight switch panel
+== The panels
+
+=== Flight switch panel
 
 The flight switch panel has:
 
@@ -18,9 +24,9 @@ The flight switch panel has:
 - A two position landing gear lever
 - Three red/green landing gear indicator LEDs 
 
-The USB vendor:product ID for the panel is 06a3:0d05.
+The USB vendor:product ID for the panel is 06a3:0d67.
 
-=== Landing gear LEDs
+==== Landing gear LEDs
 
 The landing gear LEDs can be enabled by sending a one byte USB control message to the device as follows:
 
@@ -36,10 +42,10 @@ xx000000 Not used
 
 Enabling both the red and green LED gives a yellow color.
 
-=== Switches
+==== Switches
 
-The state of the switches can be obtained by a three byte USB bulk read. The
-bits the bytes are as follows:
+The state of the switches can be obtained by a three byte USB bulk read on
+endpoint 1. The bits the bytes are as follows:
 
 ----
 Byte 1
@@ -70,7 +76,7 @@ Byte 3
 xxxx0000 Not used
 ----
 
-== Flight multi panel
+=== Flight multi panel
 
 The flight multi panel has:
 
@@ -92,7 +98,7 @@ bottom row can additionally show dashes.
 
 The USB vendor:product ID for the panel 06a3:0d06.
 
-=== Segment display and button LEDs
+==== Segment display and button LEDs
 
 The segment display and button LEDs are controlled by sending an 11 byte USB
 control message to the device. The first five bytes are for the top row, the
@@ -127,10 +133,10 @@ The 11th byte for the push button LEDs are encoded as follows:
 10000000 REV
 ----
 
-=== Switches, buttons and encoders
+==== Switches, buttons and encoders
 
-The state of the switches can be obtained by a three byte USB bulk read. The
-bits the bytes are as follows:
+The state of the switches can be obtained by a three byte USB bulk read on
+endpont 1. The bits the bytes are as follows:
 
 ----
 Byte 1
@@ -161,7 +167,7 @@ Byte 3
 xxxx0000 Not used
 ----
 
-== Flight radio panel
+=== Flight radio panel
 
 The flight radio panel has:
 
@@ -175,7 +181,7 @@ a dot can be displayed in combination with a number.
 
 The vendor:prduct ID for the panel is 06a3:0d05.
 
-=== Segment displays
+==== Segment displays
 
 The segment displays are controlled by sending a 20 byte USB
 control message to the device, 5 bytes per display, in the following order:
@@ -190,10 +196,10 @@ The 20 display numbers are encoded as follows:
 1110xxxx Shows dash/minus
 ----
 
-=== Switches, buttons and encoders
+==== Switches, buttons and encoders
 
-The state of the switches can be obtained by a three byte USB bulk read. The
-bits in the bytes are as follows:
+The state of the switches can be obtained by a three byte USB bulk read on
+endpoint 1. The bits in the bytes are as follows:
 
 ----
 Byte 1
@@ -225,4 +231,32 @@ Byte 3
 00100000 2 inner encoder ccw
 01000000 2 outer encoder cw 
 10000000 2 outer encoder ccw
+----
+
+== Interfacing with the panels using libusb
+
+=== Reading the status of the switches
+
+To read the three state bytes of the switches, use `bulkRead(1, 3)`.
+
+The first argument is the endpoint, which really is 0x81. python-libusb1 however
+automatically sets the ENDPOINT_IN bit when using `builkRead()`:
+
+----
+ENDPOINT_IN (0x80) | endpoint (0x01)
+----
+
+=== Writing to the displays and settings LEDs
+
+To set the state of the LEDs and displays, use
+`controlWrite(0x21, 0x09, 0x03, 0x00, [...])`, where `[...]` is the the list
+of bytes to write as explained above.
+
+The arguments to `controlWrite()` are:
+
+----
+request_type: ENDPONT_OUT (0x00) | CLASS_STANDARD (0x20) | RECEPIENT_INTERCACE (0x01)
+request_id: SET_CONFIGURATION (0x09)
+value: 0x03
+index: 0x00
 ----
